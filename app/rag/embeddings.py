@@ -21,6 +21,10 @@ class EmbeddingGenerator:
         self._max_cache_size = 2048
 
     def _get_st_model(self):
+        if getattr(settings, "LOW_MEMORY_MODE", True) or self.model_name in ("fallback", "deterministic", "lightweight"):
+            self._st_model = "fallback"
+            return self._st_model
+
         if self._st_model is None:
             try:
                 from sentence_transformers import SentenceTransformer
@@ -28,7 +32,7 @@ class EmbeddingGenerator:
                 self._st_model = SentenceTransformer(self.model_name)
                 self.dim = self._st_model.get_sentence_embedding_dimension()
             except Exception as e:
-                logger.warning(f"Could not load sentence-transformers model '{self.model_name}': {e}. Using dense fallback.")
+                logger.info(f"Using lightweight deterministic embeddings (sentence-transformers not loaded: {e})")
                 self._st_model = "fallback"
         return self._st_model
 

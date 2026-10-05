@@ -33,7 +33,8 @@ class Settings(BaseSettings):
     OLLAMA_MODEL: str = "llama3"
 
     # Embeddings & RAG
-    EMBEDDING_MODEL: str = "sentence-transformers/all-MiniLM-L6-v2"
+    EMBEDDING_MODEL: str = "fallback"  # 'fallback' (0MB RAM dense hash), 'gemini', 'openai', or local model
+    LOW_MEMORY_MODE: bool = True       # When true, skips heavy neural/torch imports (fits in <100MB RAM)
     CHUNK_SIZE: int = 700
     CHUNK_OVERLAP: int = 100
     TOP_K_RETRIEVAL: int = 5

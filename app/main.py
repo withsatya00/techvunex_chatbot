@@ -19,17 +19,16 @@ from app.api.leads import router as leads_router
 from app.api.feedback import router as feedback_router
 from app.api.kb import router as kb_router
 
+import warnings
+warnings.filterwarnings("ignore", category=FutureWarning, module="google.generativeai")
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
     logger.info(f"Starting {settings.APP_NAME} v{settings.APP_VERSION}")
     await init_db()
     await rag_pipeline.load_index()
-    # Pre-warm neural embedding model in thread pool so the very first user message avoids cold start latency
-    import asyncio
-    loop = asyncio.get_running_loop()
-    await loop.run_in_executor(None, embedding_service._get_st_model)
-    logger.info("Knowledge base index and embedding model pre-warmed and ready.")
+    logger.info("Knowledge base index loaded and AI assistant ready.")
     yield
     # Shutdown
     logger.info("Shutting down application...")

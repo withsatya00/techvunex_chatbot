@@ -13,6 +13,8 @@ class GeminiProvider(BaseLLMProvider):
         self._client = None
         if self.api_key:
             try:
+                import warnings
+                warnings.filterwarnings("ignore", category=FutureWarning)
                 import google.generativeai as genai
                 genai.configure(api_key=self.api_key)
                 self._genai = genai

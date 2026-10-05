@@ -28,7 +28,6 @@ ENV/
 # Database & Cache
 *.db
 *.sqlite3
-data/knowledge_base/indexed_kb.json
 
 # IDEs
 .idea/

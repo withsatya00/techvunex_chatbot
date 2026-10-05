@@ -118,33 +118,33 @@ class RAGPipeline:
         }
 
     async def load_index(self):
-        """Load chunks from DB or JSON cache into vector store and BM25 index."""
+        """Load chunks from precomputed JSON cache or DB into vector store and BM25 index."""
         chunks = []
-        try:
-            async with AsyncSessionLocal() as session:
-                stmt = select(DocumentChunk)
-                res = await session.execute(stmt)
-                db_chunks = res.scalars().all()
-                for c in db_chunks:
-                    chunks.append({
-                        "id": c.id,
-                        "document_id": c.document_id,
-                        "chunk_index": c.chunk_index,
-                        "content": c.content,
-                        "embedding": c.embedding,
-                        "metadata": c.metadata_info or {}
-                    })
-        except Exception as e:
-            logger.warning(f"Could not load chunks from DB directly: {e}")
-
-        # If DB had no chunks, try JSON cache
-        if not chunks and os.path.exists(KB_CACHE_FILE):
+        if os.path.exists(KB_CACHE_FILE):
             try:
                 with open(KB_CACHE_FILE, "r", encoding="utf-8") as f:
                     chunks = json.load(f)
-                logger.info(f"Loaded {len(chunks)} chunks from cache file.")
+                logger.info(f"Loaded {len(chunks)} chunks from knowledge base cache.")
             except Exception as e:
                 logger.error(f"Failed to load cache: {e}")
+
+        if not chunks:
+            try:
+                async with AsyncSessionLocal() as session:
+                    stmt = select(DocumentChunk)
+                    res = await session.execute(stmt)
+                    db_chunks = res.scalars().all()
+                    for c in db_chunks:
+                        chunks.append({
+                            "id": c.id,
+                            "document_id": c.document_id,
+                            "chunk_index": c.chunk_index,
+                            "content": c.content,
+                            "embedding": c.embedding,
+                            "metadata": c.metadata_info or {}
+                        })
+            except Exception as e:
+                logger.warning(f"Could not load chunks from DB directly: {e}")
 
         # If DB and cache had no chunks, automatically ingest crawled_docs.json on first boot
         if not chunks:
