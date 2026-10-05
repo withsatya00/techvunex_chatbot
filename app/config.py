@@ -1,0 +1,87 @@
+import os
+from typing import List, Union
+from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import field_validator
+
+class Settings(BaseSettings):
+    # App info
+    APP_NAME: str = "Techvunex AI Assistant"
+    APP_VERSION: str = "1.0.0"
+    DEBUG: bool = False
+    ENVIRONMENT: str = "production"
+
+    # Base URL for Techvunex
+    TECHVUNEX_BASE_URL: str = "https://techvunex.in/"
+
+    # Database
+    DATABASE_URL: str = "sqlite+aiosqlite:///./techvunex.db"
+    POSTGRES_URL: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/techvunex"
+    
+    # Redis
+    REDIS_URL: str = "redis://localhost:6379/0"
+    REDIS_ENABLED: bool = False
+
+    # LLM Settings
+    LLM_PROVIDER: str = "gemini"  # gemini, openai, groq, ollama
+    GEMINI_API_KEY: str = ""
+    GEMINI_MODEL: str = "gemini-3.5-flash-lite"
+    OPENAI_API_KEY: str = ""
+    OPENAI_MODEL: str = "gpt-4o-mini"
+    GROQ_API_KEY: str = ""
+    GROQ_MODEL: str = "llama-3.3-70b-versatile"
+    OLLAMA_BASE_URL: str = "http://localhost:11434"
+    OLLAMA_MODEL: str = "llama3"
+
+    # Embeddings & RAG
+    EMBEDDING_MODEL: str = "sentence-transformers/all-MiniLM-L6-v2"
+    CHUNK_SIZE: int = 700
+    CHUNK_OVERLAP: int = 100
+    TOP_K_RETRIEVAL: int = 5
+    RRF_K: int = 60
+
+    # Security & Auth
+    JWT_SECRET: str = "techvunex-ai-super-secret-production-key-2026"
+    JWT_ALGORITHM: str = "HS256"
+    JWT_EXPIRE_MINUTES: int = 1440
+    ADMIN_USERNAME: str = "admin@techvunex.in"
+    ADMIN_PASSWORD: str = "Techvunex@Admin2026"
+    RATE_LIMIT_PER_MINUTE: int = 60
+    CORS_ORIGINS: Union[str, List[str]] = ["*"]
+
+    # 100% Free Lead Notifications
+    # Email SMTP (Gmail / Webmail / cPanel - 100% Free)
+    NOTIFICATION_EMAIL_ENABLED: bool = False
+    SMTP_HOST: str = "smtp.gmail.com"
+    SMTP_PORT: int = 587
+    SMTP_USE_TLS: bool = True
+    SMTP_USER: str = ""
+    SMTP_PASSWORD: str = ""
+    NOTIFICATION_EMAIL_TO: str = ""  # Comma-separated if multiple
+
+    # WhatsApp (Meta Cloud API Official Free Tier - 1,000 free conversations/month)
+    WHATSAPP_NOTIFICATIONS_ENABLED: bool = False
+    WHATSAPP_API_TOKEN: str = ""
+    WHATSAPP_PHONE_NUMBER_ID: str = ""
+    WHATSAPP_RECIPIENT_PHONE: str = ""
+
+    # Telegram Bot Alerts (100% Free, Unlimited, Instant Mobile Push)
+    TELEGRAM_NOTIFICATIONS_ENABLED: bool = False
+    TELEGRAM_BOT_TOKEN: str = ""
+    TELEGRAM_CHAT_ID: str = ""
+
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore"
+    )
+
+    @field_validator("CORS_ORIGINS", mode="before")
+    @classmethod
+    def assemble_cors_origins(cls, v: Union[str, List[str]]) -> List[str]:
+        if isinstance(v, str) and not v.startswith("["):
+            return [i.strip() for i in v.split(",") if i.strip()]
+        elif isinstance(v, list):
+            return v
+        return ["*"]
+
+settings = Settings()

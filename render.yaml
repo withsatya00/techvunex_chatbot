@@ -1,0 +1,43 @@
+services:
+  - type: web
+    name: techvunex-ai-chatbot
+    env: python
+    region: oregon
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: ENVIRONMENT
+        value: production
+      - key: DEBUG
+        value: false
+      - key: TECHVUNEX_BASE_URL
+        value: https://techvunex.in/
+      - key: DATABASE_URL
+        value: sqlite+aiosqlite:///./techvunex.db
+      - key: LLM_PROVIDER
+        value: gemini
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_MODEL
+        value: gemini-3.5-flash-lite
+      - key: NOTIFICATION_EMAIL_ENABLED
+        value: "true"
+      - key: SMTP_HOST
+        value: smtp.hostinger.com
+      - key: SMTP_PORT
+        value: "465"
+      - key: SMTP_USE_TLS
+        value: "false"
+      - key: SMTP_USER
+        value: trainee4@techvunex.in
+      - key: SMTP_PASSWORD
+        sync: false
+      - key: NOTIFICATION_EMAIL_TO
+        value: trainee4@techvunex.in
+      - key: JWT_SECRET
+        generateValue: true
+      - key: CORS_ORIGINS
+        value: "*"
