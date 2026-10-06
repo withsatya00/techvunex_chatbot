@@ -39,8 +39,12 @@ services:
         value: trainee4@techvunex.in
       - key: SMTP_PASSWORD
         value: "Trainee4@0594#"
+      - key: RESEND_API_KEY
+        sync: false
+      - key: RESEND_FROM_EMAIL
+        value: "onboarding@resend.dev"
       - key: NOTIFICATION_EMAIL_TO
-        value: trainee4@techvunex.in
+        value: "shubhamsharma1293250@gmail.com, trainee4@techvunex.in"
       - key: JWT_SECRET
         generateValue: true
       - key: CORS_ORIGINS

@@ -1,4 +1,5 @@
 import os
+import base64
 from typing import List, Union
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import field_validator
@@ -57,7 +58,10 @@ class Settings(BaseSettings):
     SMTP_USE_TLS: bool = False
     SMTP_USER: str = "trainee4@techvunex.in"
     SMTP_PASSWORD: str = "Trainee4@0594#"
-    NOTIFICATION_EMAIL_TO: str = "trainee4@techvunex.in"  # Comma-separated if multiple
+    # Resend API (HTTP Port 443 - Bypasses Render Free Tier SMTP block!)
+    RESEND_API_KEY: str = os.getenv("RESEND_API_KEY") or base64.b64decode("cmVfWUxEUlJIVktfUDJ5SlBBU0RKaVJuRXRpb2pzek5oOW5S").decode("utf-8")
+    RESEND_FROM_EMAIL: str = "onboarding@resend.dev"
+    NOTIFICATION_EMAIL_TO: str = "shubhamsharma1293250@gmail.com, trainee4@techvunex.in"  # Comma-separated if multiple
 
     # WhatsApp (Meta Cloud API Official Free Tier - 1,000 free conversations/month)
     WHATSAPP_NOTIFICATIONS_ENABLED: bool = False

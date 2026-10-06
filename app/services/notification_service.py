@@ -4,7 +4,7 @@ import smtplib
 import time
 import urllib.parse
 from email.message import EmailMessage
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 import httpx
 
 from app.config import settings
@@ -198,40 +198,83 @@ Human Agent Requested: {lead_data.get('human_required', False)}
             logger.error(f"Failed to send lead email notification via SMTP: {e}")
             return False
 
-    async def send_lead_email(self, lead_data: Dict[str, Any]) -> bool:
-        """Sends lead alert email asynchronously via Python standard smtplib."""
-        if not settings.NOTIFICATION_EMAIL_ENABLED:
-            logger.debug("Email notification skipped: NOTIFICATION_EMAIL_ENABLED is False")
+    async def _send_via_resend(self, recipients: List[str], subject: str, html_content: str) -> bool:
+        """
+        Send email via Resend HTTP REST API over HTTPS Port 443.
+        This completely bypasses Render Free Tier's outbound SMTP block on ports 25, 465, and 587.
+        """
+        if not settings.RESEND_API_KEY:
+            return False
+        try:
+            url = "https://api.resend.com/emails"
+            headers = {
+                "Authorization": f"Bearer {settings.RESEND_API_KEY}",
+                "Content-Type": "application/json",
+                "User-Agent": "TechvunexAI/1.0"
+            }
+            # For onboarding@resend.dev sandbox, Resend routes to account holder email
+            target_recipients = recipients
+            if "onboarding@resend.dev" in settings.RESEND_FROM_EMAIL:
+                target_recipients = [r for r in recipients if "gmail.com" in r.lower()] or ["shubhamsharma1293250@gmail.com"]
+
+            payload = {
+                "from": settings.RESEND_FROM_EMAIL,
+                "to": target_recipients,
+                "subject": subject,
+                "html": html_content
+            }
+            async with httpx.AsyncClient(timeout=12.0) as client:
+                res = await client.post(url, headers=headers, json=payload)
+                if res.status_code in (200, 201):
+                    logger.info(f"Successfully sent lead email via Resend HTTP API to {target_recipients}: {res.json().get('id')}")
+                    return True
+                else:
+                    logger.error(f"Resend HTTP API returned error ({res.status_code}): {res.text}")
+                    return False
+        except Exception as e:
+            logger.error(f"Exception sending via Resend API: {e}")
             return False
 
-        if not settings.SMTP_USER or not settings.SMTP_PASSWORD or not settings.NOTIFICATION_EMAIL_TO:
-            logger.warning("Email notification skipped: Missing SMTP_USER, SMTP_PASSWORD, or NOTIFICATION_EMAIL_TO")
+    async def send_lead_email(self, lead_data: Dict[str, Any]) -> bool:
+        """Sends lead alert email asynchronously via Resend HTTP API (Port 443) or SMTP."""
+        if not settings.NOTIFICATION_EMAIL_ENABLED:
+            logger.debug("Email notification skipped: NOTIFICATION_EMAIL_ENABLED is False")
             return False
 
         try:
             recipients = [r.strip() for r in settings.NOTIFICATION_EMAIL_TO.split(",") if r.strip()]
             if not recipients:
-                return False
+                recipients = ["shubhamsharma1293250@gmail.com"]
 
             lead_name = lead_data.get("name") or "Website Visitor"
             service = lead_data.get("service") or "Inquiry"
             phone = lead_data.get("phone") or "No Phone"
-
-            msg = EmailMessage()
-            msg["Subject"] = f"🚀 New Lead: {lead_name} - {service} ({phone})"
-            msg["From"] = settings.SMTP_USER
-            msg["To"] = ", ".join(recipients)
+            subject = f"🚀 New Lead: {lead_name} - {service} ({phone})"
 
             plain_content = self._generate_email_plain(lead_data)
             html_content = self._generate_email_html(lead_data)
 
-            msg.set_content(plain_content)
-            msg.add_alternative(html_content, subtype="html")
+            # 1. Primary: Resend HTTP REST API (HTTPS Port 443 - Never blocked on Render Free Tier!)
+            if settings.RESEND_API_KEY:
+                resend_ok = await self._send_via_resend(recipients, subject, html_content)
+                if resend_ok:
+                    return True
 
-            success = await asyncio.to_thread(self._sync_send_smtp, msg)
-            if success:
-                logger.info(f"Successfully sent lead notification email to {recipients}")
-            return success
+            # 2. Fallback: Standard SMTP
+            if settings.SMTP_USER and settings.SMTP_PASSWORD:
+                msg = EmailMessage()
+                msg["Subject"] = subject
+                msg["From"] = settings.SMTP_USER
+                msg["To"] = ", ".join(recipients)
+                msg.set_content(plain_content)
+                msg.add_alternative(html_content, subtype="html")
+
+                success = await asyncio.to_thread(self._sync_send_smtp, msg)
+                if success:
+                    logger.info(f"Successfully sent lead notification email via SMTP to {recipients}")
+                return success
+
+            return False
         except Exception as e:
             logger.error(f"Error in send_lead_email: {e}")
             return False
