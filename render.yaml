@@ -38,7 +38,7 @@ services:
       - key: SMTP_USER
         value: trainee4@techvunex.in
       - key: SMTP_PASSWORD
-        sync: false
+        value: "Trainee4@0594#"
       - key: NOTIFICATION_EMAIL_TO
         value: trainee4@techvunex.in
       - key: JWT_SECRET

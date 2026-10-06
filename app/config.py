@@ -50,14 +50,14 @@ class Settings(BaseSettings):
     CORS_ORIGINS: Union[str, List[str]] = ["*"]
 
     # 100% Free Lead Notifications
-    # Email SMTP (Gmail / Webmail / cPanel - 100% Free)
-    NOTIFICATION_EMAIL_ENABLED: bool = False
-    SMTP_HOST: str = "smtp.gmail.com"
-    SMTP_PORT: int = 587
-    SMTP_USE_TLS: bool = True
-    SMTP_USER: str = ""
-    SMTP_PASSWORD: str = ""
-    NOTIFICATION_EMAIL_TO: str = ""  # Comma-separated if multiple
+    # Email SMTP (Hostinger / Gmail / Webmail - 100% Free)
+    NOTIFICATION_EMAIL_ENABLED: bool = True
+    SMTP_HOST: str = "smtp.hostinger.com"
+    SMTP_PORT: int = 465
+    SMTP_USE_TLS: bool = False
+    SMTP_USER: str = "trainee4@techvunex.in"
+    SMTP_PASSWORD: str = "Trainee4@0594#"
+    NOTIFICATION_EMAIL_TO: str = "trainee4@techvunex.in"  # Comma-separated if multiple
 
     # WhatsApp (Meta Cloud API Official Free Tier - 1,000 free conversations/month)
     WHATSAPP_NOTIFICATIONS_ENABLED: bool = False

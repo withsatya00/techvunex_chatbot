@@ -7,33 +7,57 @@
   <link rel="stylesheet" href="/static/admin/admin.css" />
 </head>
 <body>
-  <!-- Sidebar -->
-  <aside class="sidebar">
-    <div class="brand">
-      <div class="brand-badge">T</div>
-      <div>Techvunex Admin</div>
+  <!-- Secure Admin Login Gate -->
+  <div id="login-overlay" class="login-overlay">
+    <div class="login-card">
+      <div class="login-logo">T</div>
+      <h2 class="login-title">Techvunex Admin Portal</h2>
+      <p class="login-subtitle">Sign in with your administrator credentials to access leads, chat transcripts, and analytics.</p>
+      
+      <div id="login-error" class="login-error"></div>
+      
+      <form id="admin-login-form" class="login-form">
+        <label for="admin-email">Admin Email / Username</label>
+        <input type="text" id="admin-email" placeholder="admin@techvunex.in" required autocomplete="username" />
+        
+        <label for="admin-password">Password</label>
+        <input type="password" id="admin-password" placeholder="••••••••••••" required autocomplete="current-password" />
+        
+        <button type="submit" id="login-submit-btn" class="login-btn">Sign In to Dashboard</button>
+      </form>
     </div>
-    <ul class="nav-links">
-      <li class="nav-item active" data-tab="overview">📊 Overview</li>
-      <li class="nav-item" data-tab="conversations">💬 Conversations</li>
-      <li class="nav-item" data-tab="leads">👥 Leads Pipeline</li>
-      <li class="nav-item" data-tab="kb">📚 Knowledge Base</li>
-      <li class="nav-item" data-tab="analytics">📈 Analytics</li>
-    </ul>
-    <div class="sidebar-footer">
-      Techvunex AI v1.0.0<br/>Status: Production Ready
-    </div>
-  </aside>
+  </div>
 
-  <!-- Main Body -->
-  <main class="main-wrapper">
-    <header class="top-bar">
-      <h1 class="page-title" id="page-title">Operations Overview</h1>
-      <div class="top-actions">
-        <button class="btn btn-outline" onclick="loadAllData()">🔄 Refresh</button>
-        <a href="/" target="_blank" class="btn btn-primary">Open Website Demo</a>
+  <!-- Authenticated Dashboard Container (Protected) -->
+  <div id="dashboard-container" style="display: none;">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-badge">T</div>
+        <div>Techvunex Admin</div>
       </div>
-    </header>
+      <ul class="nav-links">
+        <li class="nav-item active" data-tab="overview">📊 Overview</li>
+        <li class="nav-item" data-tab="conversations">💬 Conversations</li>
+        <li class="nav-item" data-tab="leads">👥 Leads Pipeline</li>
+        <li class="nav-item" data-tab="kb">📚 Knowledge Base</li>
+        <li class="nav-item" data-tab="analytics">📈 Analytics</li>
+      </ul>
+      <div class="sidebar-footer">
+        Techvunex AI v1.0.0<br/>Status: Production Ready
+      </div>
+    </aside>
+
+    <!-- Main Body -->
+    <main class="main-wrapper">
+      <header class="top-bar">
+        <h1 class="page-title" id="page-title">Operations Overview</h1>
+        <div class="top-actions">
+          <button class="btn btn-outline" onclick="loadAllData()">🔄 Refresh</button>
+          <a href="/" target="_blank" class="btn btn-primary">Open Website Demo</a>
+          <button class="btn btn-outline" onclick="logoutAdmin()" style="color: #ef4444; border-color: #fca5a5;">🚪 Logout</button>
+        </div>
+      </header>
 
     <div class="content-body">
       <!-- OVERVIEW TAB -->
@@ -218,6 +242,7 @@
       </section>
     </div>
   </main>
+  </div>
 
   <script src="/static/admin/admin.js"></script>
 </body>

@@ -7,9 +7,87 @@ let allConversations = [];
 let allLeads = [];
 let allDocuments = [];
 
+function getAuthToken() {
+  return sessionStorage.getItem('techvunex_admin_token');
+}
+
+function checkAuth() {
+  const token = getAuthToken();
+  const overlay = document.getElementById('login-overlay');
+  const dashboard = document.getElementById('dashboard-container');
+  if (token) {
+    if (overlay) overlay.style.display = 'none';
+    if (dashboard) dashboard.style.display = 'flex';
+    loadAllData();
+  } else {
+    if (overlay) overlay.style.display = 'flex';
+    if (dashboard) dashboard.style.display = 'none';
+  }
+}
+
+function logoutAdmin() {
+  sessionStorage.removeItem('techvunex_admin_token');
+  checkAuth();
+}
+
+function setupLoginForm() {
+  const form = document.getElementById('admin-login-form');
+  if (!form) return;
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const username = document.getElementById('admin-email').value.trim();
+    const password = document.getElementById('admin-password').value;
+    const errorEl = document.getElementById('login-error');
+    const submitBtn = document.getElementById('login-submit-btn');
+
+    errorEl.style.display = 'none';
+    submitBtn.disabled = true;
+    submitBtn.innerText = 'Signing in...';
+
+    try {
+      const res = await fetch(`${API_BASE}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        sessionStorage.setItem('techvunex_admin_token', data.access_token);
+        checkAuth();
+      } else {
+        const err = await res.json().catch(() => ({}));
+        errorEl.innerText = err.detail || 'Incorrect admin email or password. Please try again.';
+        errorEl.style.display = 'block';
+      }
+    } catch (err) {
+      errorEl.innerText = 'Connection error. Please try again.';
+      errorEl.style.display = 'block';
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.innerText = 'Sign In to Dashboard';
+    }
+  });
+}
+
+async function authFetch(url, options = {}) {
+  const token = getAuthToken();
+  options.headers = options.headers || {};
+  if (token) {
+    options.headers['Authorization'] = `Bearer ${token}`;
+  }
+  const res = await fetch(url, options);
+  if (res.status === 401) {
+    logoutAdmin();
+  }
+  return res;
+}
+
 document.addEventListener('DOMContentLoaded', () => {
+  setupLoginForm();
   setupTabs();
-  loadAllData();
+  checkAuth();
 });
 
 function setupTabs() {
@@ -47,7 +125,7 @@ async function loadAllData() {
 
 async function fetchConversations() {
   try {
-    const res = await fetch(`${API_BASE}/conversations`);
+    const res = await authFetch(`${API_BASE}/conversations`);
     if (res.ok) {
       allConversations = await res.json();
       renderConversations();
@@ -59,7 +137,7 @@ async function fetchConversations() {
 
 async function fetchLeads() {
   try {
-    const res = await fetch(`${API_BASE}/leads`);
+    const res = await authFetch(`${API_BASE}/leads`);
     if (res.ok) {
       allLeads = await res.json();
       renderLeads();
@@ -71,7 +149,7 @@ async function fetchLeads() {
 
 async function fetchKB() {
   try {
-    const res = await fetch(`${API_BASE}/kb/documents`);
+    const res = await authFetch(`${API_BASE}/kb/documents`);
     if (res.ok) {
       allDocuments = await res.json();
       renderKB();
@@ -133,7 +211,7 @@ function renderConversations() {
 
 async function viewConversation(id) {
   try {
-    const res = await fetch(`${API_BASE}/conversations/${id}`);
+    const res = await authFetch(`${API_BASE}/conversations/${id}`);
     if (res.ok) {
       const data = await res.json();
       const transcript = data.messages.map(m => `${m.role.toUpperCase()}: ${m.content}`).join('\n\n---\n\n');
@@ -188,7 +266,7 @@ function renderLeads() {
 
 async function updateLeadStatus(id, newStatus) {
   try {
-    const res = await fetch(`${API_BASE}/leads/${id}`, {
+    const res = await authFetch(`${API_BASE}/leads/${id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status: newStatus })
@@ -244,7 +322,7 @@ async function triggerReindex() {
   if (!confirm('Re-crawl and re-index the entire Techvunex knowledge base?')) return;
   alert('Re-indexing initiated in the background. Data will refresh shortly.');
   try {
-    const res = await fetch(`${API_BASE}/kb/reindex`, { method: 'POST' });
+    const res = await authFetch(`${API_BASE}/kb/reindex`, { method: 'POST' });
     if (res.ok) {
       alert('Knowledge base reindexed successfully!');
       await loadAllData();
