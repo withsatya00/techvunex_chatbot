@@ -435,26 +435,75 @@
     }
   }
 
-  function bindDOMEvents() {
-    // Toggle Window
-    launcherBtnEl.onclick = () => {
-      isOpen = !isOpen;
-      chatBoxEl.style.display = isOpen ? 'flex' : 'none';
-      const icon = document.getElementById('tv-launcher-icon');
-      if (icon) icon.textContent = isOpen ? '✕' : '💬';
-      if (isOpen && inputFieldEl) {
-        setTimeout(() => inputFieldEl.focus(), 100);
-      }
-    };
+  function openChat() {
+    isOpen = true;
+    if (chatBoxEl) chatBoxEl.style.display = 'flex';
+    const icon = document.getElementById('tv-launcher-icon');
+    if (icon) icon.textContent = '✕';
+    if (inputFieldEl) {
+      setTimeout(() => inputFieldEl.focus(), 100);
+    }
+  }
 
-    // Close
+  function closeChat() {
+    isOpen = false;
+    if (chatBoxEl) chatBoxEl.style.display = 'none';
+    const icon = document.getElementById('tv-launcher-icon');
+    if (icon) icon.textContent = '💬';
+  }
+
+  function toggleChat() {
+    if (isOpen) {
+      closeChat();
+    } else {
+      openChat();
+    }
+  }
+
+  // Global API accessible from any button or script on host website
+  window.TechvunexChat = {
+    open: openChat,
+    close: closeChat,
+    toggle: toggleChat,
+    send: (message) => {
+      openChat();
+      if (message && typeof message === 'string') {
+        sendMessage(message);
+      }
+    }
+  };
+
+  function bindDOMEvents() {
+    // Launcher button toggle
+    if (launcherBtnEl) {
+      launcherBtnEl.onclick = toggleChat;
+    }
+
+    // Check if host website wants to hide default floating circular launcher
+    const hideLauncher = scriptTag && (
+      scriptTag.getAttribute('data-hide-launcher') === 'true' ||
+      scriptTag.getAttribute('data-no-launcher') === 'true'
+    );
+    if (hideLauncher && launcherBtnEl) {
+      launcherBtnEl.style.display = 'none';
+    }
+
+    // Delegate clicks for any button with data-techvunex-open, data-open-chat, or .open-techvunex-chat
+    document.addEventListener('click', (e) => {
+      const trigger = e.target && e.target.closest && e.target.closest('[data-techvunex-open], [data-open-chat], .open-techvunex-chat, .tv-open-chat');
+      if (trigger) {
+        e.preventDefault();
+        openChat();
+        const prompt = trigger.getAttribute('data-techvunex-prompt');
+        if (prompt) {
+          sendMessage(prompt);
+        }
+      }
+    });
+
+    // Close button inside header
     const closeBtn = document.getElementById('tv-btn-close');
-    if (closeBtn) closeBtn.onclick = () => {
-      isOpen = false;
-      chatBoxEl.style.display = 'none';
-      const icon = document.getElementById('tv-launcher-icon');
-      if (icon) icon.textContent = '💬';
-    };
+    if (closeBtn) closeBtn.onclick = closeChat;
 
     // Reset / New Conversation
     function startNewChatSession(promptConfirmation = false) {
