@@ -126,7 +126,7 @@ class LeadService:
 
     @staticmethod
     def _trigger_notification(lead: Lead) -> None:
-        if lead.phone or lead.email:
+        if lead.phone or lead.email or lead.human_required:
             lead_dict = {
                 "id": str(lead.id),
                 "name": lead.name,

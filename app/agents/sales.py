@@ -62,16 +62,22 @@ class SalesAssistantAgent:
         if email_match:
             lead["email"] = email_match.group(0)
 
-        # Phone (India numbers e.g. +91 9876543210 or 10 digits)
-        phone_match = re.search(r'(?:\+?91[\s-]?)?[6-9]\d{9}\b', text)
+        # Phone (Supports Indian mobile 6-9, numbers preceded by mobile/mobike/phone, and any 10 digits)
+        phone_match = re.search(r'(?:\+?91[\s-]?)?\b[6-9]\d{9}\b', text)
+        if not phone_match:
+            phone_match = re.search(r'(?i)(?:phone|mobile|mobike|contact|number|no\.?|call|whatsapp)[\s:]*([0-9]{10})\b', text)
+        if not phone_match:
+            phone_match = re.search(r'\b\d{10}\b', text)
         if phone_match:
-            lead["phone"] = phone_match.group(0)
+            lead["phone"] = phone_match.group(1) if phone_match.groups() else phone_match.group(0)
 
-        # Name extraction (e.g., "my name is Rahul", "I am John", "naam Amit hai")
-        name_match = re.search(r'(?i)(?:my name is|i am|i\'m|this is|naam)\s+([A-Za-z]{2,25})(?:\s+(?!from|at|with|and|company|phone|email)([A-Za-z]{2,25}))?', text)
+        # Name extraction (e.g., "my name is Rahul", "I am John", "mera naam Anil hai")
+        name_match = re.search(r'(?i)(?:my name is|i am|i\'m|this is|mera naam hai|mera naam|naam)\s+([A-Za-z]{2,25})(?:\s+(?!hai|aur|from|at|with|and|company|phone|mobile|mobike|email)([A-Za-z]{2,25}))?', text)
         if name_match:
             first = name_match.group(1).strip()
             second = name_match.group(2).strip() if name_match.group(2) else ""
+            if first.lower() in ("hai", "mera", "naam", "ek", "mujhe", "please"):
+                first = ""
             lead["name"] = f"{first} {second}".strip() if second else first
 
         # Company extraction

@@ -97,9 +97,13 @@ class ChatService:
 
         # 2. Phone extraction (latest phone wins)
         for msg in reversed_messages:
-            phone_match = re.search(r'(?:\+?91[\s-]?)?[6-9]\d{9}\b', msg)
+            phone_match = re.search(r'(?:\+?91[\s-]?)?\b[6-9]\d{9}\b', msg)
+            if not phone_match:
+                phone_match = re.search(r'(?i)(?:phone|mobile|mobike|contact|number|no\.?|call|whatsapp)[\s:]*([0-9]{10})\b', msg)
+            if not phone_match:
+                phone_match = re.search(r'\b\d{10}\b', msg)
             if phone_match:
-                memory["phone"] = phone_match.group(0).strip()
+                memory["phone"] = phone_match.group(1).strip() if phone_match.groups() else phone_match.group(0).strip()
                 break
 
         # 3. Email extraction (latest email wins)

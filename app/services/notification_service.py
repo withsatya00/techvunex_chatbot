@@ -329,8 +329,8 @@ Human Agent Requested: {lead_data.get('human_required', False)}
         phone = lead_data.get("phone")
         email = lead_data.get("email")
 
-        # Only dispatch if at least one contact channel is present
-        if not phone and not email:
+        # Only dispatch if at least one contact channel is present or human agent requested
+        if not phone and not email and not lead_data.get("human_required"):
             logger.debug("Notification skipped: No phone or email captured yet.")
             return
 
