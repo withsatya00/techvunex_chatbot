@@ -38,7 +38,7 @@ class Settings(BaseSettings):
     LOW_MEMORY_MODE: bool = True       # When true, skips heavy neural/torch imports (fits in <100MB RAM)
     CHUNK_SIZE: int = 700
     CHUNK_OVERLAP: int = 100
-    TOP_K_RETRIEVAL: int = 5
+    TOP_K_RETRIEVAL: int = 3
     RRF_K: int = 60
 
     # Security & Auth

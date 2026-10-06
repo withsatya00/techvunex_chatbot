@@ -34,7 +34,7 @@ class GeminiProvider(BaseLLMProvider):
         messages: List[Dict[str, str]],
         system_prompt: str,
         temperature: float = 0.3,
-        max_tokens: int = 1000
+        max_tokens: int = 450
     ) -> LLMResponse:
         if not self.api_key:
             raise LLMProviderError("GEMINI_API_KEY is not configured.")
@@ -78,7 +78,7 @@ class GeminiProvider(BaseLLMProvider):
         messages: List[Dict[str, str]],
         system_prompt: str,
         temperature: float = 0.3,
-        max_tokens: int = 1000
+        max_tokens: int = 450
     ) -> AsyncIterator[str]:
         if not self.api_key:
             raise LLMProviderError("GEMINI_API_KEY is not configured.")

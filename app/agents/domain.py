@@ -87,9 +87,20 @@ class DomainClassifier:
     ]
 
     # Casual polite acknowledgments and simple questions (Master AI Spec §27)
+    GREETING_PATTERNS = [
+        r"^(?:hi|hello|hey|heya|namaste|namaskar|hola|good\s+(?:morning|afternoon|evening|day))[\s!,\.]*$",
+        r"^(?:hi|hello|hey)\s+(?:techvunex|bot|assistant|there|team|sir|bhai)[\s!,\.]*$",
+    ]
+
+    THANKS_PATTERNS = [
+        r"^(?:thanks|thank\s+you|thx|dhanyawad|shukriya|thanks\s+a\s+lot|thank\s+you\s+so\s+much|bahut\s+dhanyawad)[\s!\.]*$",
+    ]
+
+    ACK_PATTERNS = [
+        r"^(?:ok|okay|thik\s+hai|theek\s+hai|got\s+it|understood|cool|great|nice|perfect|done|sahi\s+hai|achha)[\s!\.]*$",
+    ]
+
     CASUAL_PATTERNS = [
-        r"^(?:thanks|thank\s+you|thx|dhanyawad|shukriya|thanks\s+a\s+lot|thank\s+you\s+so\s+much)[\s!\.]*$",
-        r"^(?:ok|okay|thik\s+hai|theek\s+hai|got\s+it|understood|cool|great|nice|perfect|done|sahi\s+hai)[\s!\.]*$",
         r"^(?:who\s+are\s+you|what\s+can\s+you\s+do|aap\s+kaun\s+ho|tum\s+kaun\s+ho)[\s!\?\.]*$"
     ]
 
@@ -164,7 +175,22 @@ class DomainClassifier:
             if re.search(p, q_lower):
                 return "legal_advice"
 
-        # 6. Casual conversation (thanks, ok, who are you)
+        # 6. Quick greeting check (Instant zero-latency response)
+        for p in self.GREETING_PATTERNS:
+            if re.search(p, q_lower):
+                return "greeting"
+
+        # 7. Quick thanks check
+        for p in self.THANKS_PATTERNS:
+            if re.search(p, q_lower):
+                return "thanks"
+
+        # 8. Quick acknowledgment check
+        for p in self.ACK_PATTERNS:
+            if re.search(p, q_lower):
+                return "acknowledgment"
+
+        # 9. Casual conversation (who are you)
         for p in self.CASUAL_PATTERNS:
             if re.search(p, q_lower):
                 return "techvunex_relevant"
@@ -234,6 +260,33 @@ class DomainClassifier:
         Returns a polite, localized boundary response or refusal without calling RAG.
         """
         q_lower = query.lower()
+
+        # 0. Pure Greeting (Instant zero-latency conversational welcome)
+        if domain == "greeting":
+            if language == "hi":
+                return "नमस्ते! 👋 टेकवुनेक्स इनोवेशन में आपका स्वागत है। मैं आपकी कस्टम वेबसाइट, सॉफ्टवेयर, मोबाइल ऐप या CRM/ERP प्रोजेक्ट में कैसे सहायता कर सकता हूँ?"
+            elif language == "hinglish":
+                return "Hello! 👋 Welcome to Techvunex Innovation. Main aapki custom website, software development, mobile app ya CRM/ERP project mein kaise help kar sakta hoon?"
+            else:
+                return "Hello! 👋 Welcome to Techvunex Innovation. How can I assist you with custom websites, software development, mobile apps, or CRM/ERP today?"
+
+        # 0. Thanks & Appreciation
+        if domain == "thanks":
+            if language == "hi":
+                return "आपका बहुत स्वागत है! 😊 यदि आपके पास हमारी सेवाओं या 100% फ्री वेबसाइट ऑफर के बारे में कोई और प्रश्न है, तो अवश्य पूछें।"
+            elif language == "hinglish":
+                return "You're welcome! 😊 Agar aapko Techvunex services ya 100% Free Website Offer ke baare mein koi aur details chahiye, toh zaroor batayein."
+            else:
+                return "You're welcome! 😊 Feel free to ask if you have any questions about our services or our 100% Free Website Offer."
+
+        # 0. Acknowledgment (Ok / Understood)
+        if domain == "acknowledgment":
+            if language == "hi":
+                return "बहुत बढ़िया! 👍 जब भी आप अपने प्रोजेक्ट या आवश्यकताओं पर चर्चा करना चाहें, हम यहाँ उपलब्ध हैं।"
+            elif language == "hinglish":
+                return "Great! 👍 Jab bhi aap apne project ya requirement discuss karna chahein, hum yahan hain."
+            else:
+                return "Great! 👍 Whenever you're ready to discuss your project, we're here to help."
 
         # 1. System Control
         if domain == "system_control":
