@@ -59,9 +59,9 @@ class Settings(BaseSettings):
     SMTP_USER: str = "trainee4@techvunex.in"
     SMTP_PASSWORD: str = "Trainee4@0594#"
     # Resend API (HTTP Port 443 - Bypasses Render Free Tier SMTP block!)
-    RESEND_API_KEY: str = os.getenv("RESEND_API_KEY") or base64.b64decode("cmVfWUxEUlJIVktfUDJ5SlBBU0RKaVJuRXRpb2pzek5oOW5S").decode("utf-8")
+    RESEND_API_KEY: str = os.getenv("RESEND_API_KEY") or base64.b64decode("cmVfSlozRkxIZU5fM3A3QXZ1S1F1SDJleXZxcjN0a3F6Z2pO").decode("utf-8")
     RESEND_FROM_EMAIL: str = "onboarding@resend.dev"
-    NOTIFICATION_EMAIL_TO: str = "shubhamsharma1293250@gmail.com, trainee4@techvunex.in"  # Comma-separated if multiple
+    NOTIFICATION_EMAIL_TO: str = "trainee4@techvunex.in"  # Comma-separated if multiple
 
     # WhatsApp (Meta Cloud API Official Free Tier - 1,000 free conversations/month)
     WHATSAPP_NOTIFICATIONS_ENABLED: bool = False

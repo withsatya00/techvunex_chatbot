@@ -215,7 +215,7 @@ Human Agent Requested: {lead_data.get('human_required', False)}
             # For onboarding@resend.dev sandbox, Resend routes to account holder email
             target_recipients = recipients
             if "onboarding@resend.dev" in settings.RESEND_FROM_EMAIL:
-                target_recipients = [r for r in recipients if "gmail.com" in r.lower()] or ["shubhamsharma1293250@gmail.com"]
+                target_recipients = [r for r in recipients if "techvunex.in" in r.lower()] or ["trainee4@techvunex.in"]
 
             payload = {
                 "from": settings.RESEND_FROM_EMAIL,
