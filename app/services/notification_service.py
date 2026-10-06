@@ -198,10 +198,10 @@ Human Agent Requested: {lead_data.get('human_required', False)}
             logger.error(f"Failed to send lead email notification via SMTP: {e}")
             return False
 
-    async def _send_via_resend(self, recipients: List[str], subject: str, html_content: str) -> bool:
+    async def _send_via_resend(self, recipients: List[str], subject: str, html_content: str, plain_content: str = "", reply_to: str = "info@techvunex.in") -> bool:
         """
         Send email via Resend HTTP REST API over HTTPS Port 443.
-        This completely bypasses Render Free Tier's outbound SMTP block on ports 25, 465, and 587.
+        Includes multipart plain text and professional headers to ensure high inbox deliverability.
         """
         if not settings.RESEND_API_KEY:
             return False
@@ -217,12 +217,18 @@ Human Agent Requested: {lead_data.get('human_required', False)}
             if "onboarding@resend.dev" in settings.RESEND_FROM_EMAIL:
                 target_recipients = [r for r in recipients if "techvunex.in" in r.lower()] or ["trainee4@techvunex.in"]
 
+            from_display = f"Techvunex Assistant <{settings.RESEND_FROM_EMAIL}>" if "<" not in settings.RESEND_FROM_EMAIL else settings.RESEND_FROM_EMAIL
+
             payload = {
-                "from": settings.RESEND_FROM_EMAIL,
+                "from": from_display,
                 "to": target_recipients,
+                "reply_to": reply_to,
                 "subject": subject,
                 "html": html_content
             }
+            if plain_content:
+                payload["text"] = plain_content
+
             async with httpx.AsyncClient(timeout=12.0) as client:
                 res = await client.post(url, headers=headers, json=payload)
                 if res.status_code in (200, 201):
@@ -244,19 +250,28 @@ Human Agent Requested: {lead_data.get('human_required', False)}
         try:
             recipients = [r.strip() for r in settings.NOTIFICATION_EMAIL_TO.split(",") if r.strip()]
             if not recipients:
-                recipients = ["shubhamsharma1293250@gmail.com"]
+                recipients = ["trainee4@techvunex.in"]
 
             lead_name = lead_data.get("name") or "Website Visitor"
             service = lead_data.get("service") or "Inquiry"
             phone = lead_data.get("phone") or "No Phone"
-            subject = f"🚀 New Lead: {lead_name} - {service} ({phone})"
+            
+            # Clean subject without spam-trigger symbols
+            subject = f"New Lead Inquiry: {lead_name} - {service} ({phone})"
+            reply_to = lead_data.get("email") or "info@techvunex.in"
 
             plain_content = self._generate_email_plain(lead_data)
             html_content = self._generate_email_html(lead_data)
 
             # 1. Primary: Resend HTTP REST API (HTTPS Port 443 - Never blocked on Render Free Tier!)
             if settings.RESEND_API_KEY:
-                resend_ok = await self._send_via_resend(recipients, subject, html_content)
+                resend_ok = await self._send_via_resend(
+                    recipients,
+                    subject,
+                    html_content,
+                    plain_content=plain_content,
+                    reply_to=reply_to
+                )
                 if resend_ok:
                     return True
 
