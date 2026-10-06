@@ -28,32 +28,16 @@
     return 'sess_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9);
   }
 
-  function getStoredMessages() {
-    try {
-      const raw = localStorage.getItem('techvunex_chat_messages');
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-      }
-    } catch (e) {}
-    return null;
-  }
+  // Purge any legacy stored messages so chats NEVER persist across visits or users
+  try {
+    localStorage.removeItem('techvunex_chat_messages');
+    sessionStorage.removeItem('techvunex_chat_messages');
+  } catch (e) {}
+
+  let sessionId = generateNewSessionId();
 
   function saveStoredMessages(msgs) {
-    try {
-      localStorage.setItem('techvunex_chat_messages', JSON.stringify(msgs));
-    } catch (e) {}
-  }
-
-  let savedMessages = getStoredMessages();
-  let sessionId = localStorage.getItem('techvunex_session_id');
-
-  // If user has no active saved messages, start with a FRESH session ID!
-  // This guarantees past conversation details (like Rahul/Restaurant) never leak into new visits.
-  if (!sessionId || !savedMessages || savedMessages.length <= 1) {
-    sessionId = generateNewSessionId();
-    localStorage.setItem('techvunex_session_id', sessionId);
-    savedMessages = null;
+    // In-memory only: do not persist to localStorage so chats never leak across sessions/devices
   }
 
   const welcomeMessage = {
@@ -63,7 +47,7 @@
     sources: []
   };
 
-  let messages = (savedMessages && savedMessages.length > 0) ? savedMessages : [welcomeMessage];
+  let messages = [welcomeMessage];
 
   const suggestedPrompts = [
     "100% Free Website Offer",
@@ -435,6 +419,39 @@
     }
   }
 
+  function startNewChatSession(promptConfirmation = false) {
+    if (promptConfirmation && !confirm('Start a new conversation? Current chat will be reset.')) {
+      return;
+    }
+    sessionId = generateNewSessionId();
+    try {
+      localStorage.removeItem('techvunex_chat_messages');
+      sessionStorage.removeItem('techvunex_chat_messages');
+    } catch (e) {}
+    messages = [
+      {
+        id: 'msg_welcome_' + Date.now(),
+        role: 'assistant',
+        content: 'Hi 👋 I am the official AI Assistant for Techvunex Innovation. How can I assist you with custom software, website offers, CRM/ERP, or AI automation today?',
+        sources: []
+      }
+    ];
+    if (messagesContainerEl) {
+      messagesContainerEl.innerHTML = `
+        <div class="tv-typing-indicator" id="tv-typing" style="display: none;">
+          <span class="tv-dot"></span>
+          <span class="tv-dot"></span>
+          <span class="tv-dot"></span>
+        </div>
+      `;
+      typingIndicatorEl = document.getElementById('tv-typing');
+      appendMessageToDOM(messages[0]);
+    }
+    if (suggestionsBarEl) {
+      renderSuggestions(suggestedPrompts);
+    }
+  }
+
   function openChat() {
     isOpen = true;
     if (chatBoxEl) chatBoxEl.style.display = 'flex';
@@ -450,6 +467,9 @@
     if (chatBoxEl) chatBoxEl.style.display = 'none';
     const icon = document.getElementById('tv-launcher-icon');
     if (icon) icon.textContent = '💬';
+
+    // Reset conversation immediately on close so old chats never linger
+    startNewChatSession(false);
   }
 
   function toggleChat() {
@@ -465,6 +485,7 @@
     open: openChat,
     close: closeChat,
     toggle: toggleChat,
+    reset: () => startNewChatSession(false),
     send: (message) => {
       openChat();
       if (message && typeof message === 'string') {
@@ -504,37 +525,6 @@
     // Close button inside header
     const closeBtn = document.getElementById('tv-btn-close');
     if (closeBtn) closeBtn.onclick = closeChat;
-
-    // Reset / New Conversation
-    function startNewChatSession(promptConfirmation = false) {
-      if (promptConfirmation && !confirm('Start a new conversation? Current chat will be reset.')) {
-        return;
-      }
-      sessionId = generateNewSessionId();
-      localStorage.setItem('techvunex_session_id', sessionId);
-      try {
-        localStorage.removeItem('techvunex_chat_messages');
-      } catch (e) {}
-      messages = [
-        {
-          id: 'msg_welcome_' + Date.now(),
-          role: 'assistant',
-          content: 'Hi 👋 I am the official AI Assistant for Techvunex Innovation. How can I assist you with custom software, website offers, CRM/ERP, or AI automation today?',
-          sources: []
-        }
-      ];
-      if (messagesContainerEl) {
-        messagesContainerEl.innerHTML = `
-          <div class="tv-typing-indicator" id="tv-typing" style="display: none;">
-            <span class="tv-dot"></span>
-            <span class="tv-dot"></span>
-            <span class="tv-dot"></span>
-          </div>
-        `;
-        typingIndicatorEl = document.getElementById('tv-typing');
-        appendMessageToDOM(messages[0]);
-      }
-    }
 
     const newChatBtn = document.getElementById('tv-btn-new-chat');
     if (newChatBtn) newChatBtn.onclick = () => startNewChatSession(true);
