@@ -67,7 +67,7 @@ async def test_lead_email_subject_and_bcc():
             call_args = mock_resend.call_args
             subject = call_args[0][1]
             bcc = call_args[1]["bcc"]
-            assert subject == "Techvunex AI: Website Development"
+            assert subject == "Techvunex AI Enquiry: Website Development"
             assert "boss@techvunex.com" in bcc
             assert "info@techvunex.in" in bcc
 

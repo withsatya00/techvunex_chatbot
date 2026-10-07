@@ -261,7 +261,7 @@ Service: {service} {req}
                 target_recipients = [r for r in recipients if "techvunex.in" in r.lower()] or ["trainee4@techvunex.in"]
                 target_bcc = [b for b in target_bcc if "techvunex.in" in b.lower()]
 
-            from_display = f"Techvunex AI <{settings.RESEND_FROM_EMAIL}>" if "<" not in settings.RESEND_FROM_EMAIL else settings.RESEND_FROM_EMAIL
+            from_display = f"Techvunex Innovation <{settings.RESEND_FROM_EMAIL}>" if "<" not in settings.RESEND_FROM_EMAIL else settings.RESEND_FROM_EMAIL
 
             payload = {
                 "from": from_display,
@@ -306,7 +306,7 @@ Service: {service} {req}
                 recipients = ["trainee4@techvunex.in"]
 
             clean_service = self._normalize_service_name(lead_data.get("service"))
-            subject = f"Techvunex AI: {clean_service}"
+            subject = f"Techvunex AI Enquiry: {clean_service}"
             reply_to = lead_data.get("email") or "info@techvunex.in"
 
             bcc_recipients = [b.strip() for b in settings.NOTIFICATION_EMAIL_BCC.split(",") if b.strip()]
@@ -331,7 +331,7 @@ Service: {service} {req}
             if settings.SMTP_USER and settings.SMTP_PASSWORD:
                 msg = EmailMessage()
                 msg["Subject"] = subject
-                msg["From"] = f"Techvunex AI <{settings.SMTP_USER}>" if "<" not in settings.SMTP_USER else settings.SMTP_USER
+                msg["From"] = f"Techvunex Innovation <{settings.SMTP_USER}>" if "<" not in settings.SMTP_USER else settings.SMTP_USER
                 msg["To"] = ", ".join(recipients)
                 if bcc_recipients:
                     msg["Bcc"] = ", ".join(bcc_recipients)
