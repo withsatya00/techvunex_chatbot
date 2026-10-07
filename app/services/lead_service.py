@@ -24,15 +24,26 @@ class LeadService:
             res = await session.execute(stmt)
             existing_lead = res.scalar_one_or_none()
         elif phone:
-            stmt = select(Lead).where(Lead.phone == phone)
+            import re
+            clean_p = re.sub(r"\D", "", str(phone))
+            if len(clean_p) == 12 and clean_p.startswith("91"):
+                clean_p = clean_p[2:]
+            stmt = select(Lead).where(
+                (Lead.phone == phone) | (Lead.phone == clean_p) | (Lead.phone.endswith(clean_p[-10:] if len(clean_p) >= 10 else clean_p))
+            )
             res = await session.execute(stmt)
             existing_lead = res.scalar_one_or_none()
 
         if existing_lead:
             # Update non-null fields
             for key in ["name", "company", "service", "requirement", "budget", "timeline", "status", "human_required"]:
-                if lead_data.get(key) is not None:
-                    setattr(existing_lead, key, lead_data[key])
+                val = lead_data.get(key)
+                if val is not None:
+                    # Never overwrite an existing user name with placeholder
+                    if key == "name" and str(val).strip().lower() in ("website visitor", "not provided", "anonymous", ""):
+                        if existing_lead.name:
+                            continue
+                    setattr(existing_lead, key, val)
             existing_lead.updated_at = datetime.utcnow()
             await session.commit()
             await session.refresh(existing_lead)

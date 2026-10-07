@@ -46,34 +46,71 @@ class NotificationService:
         encoded = urllib.parse.quote(message_text)
         return f"https://wa.me/{clean_phone}?text={encoded}"
 
+    def _normalize_service_name(self, raw_service: Optional[str]) -> str:
+        """Normalizes requested service to standard display name matching Techvunex offerings."""
+        if not raw_service:
+            return "Website Development"
+        s = raw_service.strip()
+        s_lower = s.lower()
+        if "crm" in s_lower or "erp" in s_lower:
+            return "CRM & ERP Solutions"
+        if "ai" in s_lower or "chatbot" in s_lower:
+            return "AI Automation"
+        if "mobile" in s_lower or "app" in s_lower:
+            return "Mobile App Development"
+        if "seo" in s_lower or "smo" in s_lower:
+            return "Digital Marketing & SEO"
+        if "custom software" in s_lower or "software" in s_lower:
+            return "Custom Software Development"
+        if "ui" in s_lower or "ux" in s_lower:
+            return "UI/UX Design"
+        if "cloud" in s_lower:
+            return "Cloud Solutions"
+        if any(k in s_lower for k in ["website", "web", "ecommerce", "e-commerce", "landing page", "saas", "free"]):
+            return "Website Development"
+        return s
+
     def _generate_email_html(self, lead_data: Dict[str, Any]) -> str:
         name = lead_data.get("name") or "Website Visitor"
         phone = lead_data.get("phone") or "Not provided"
         email = lead_data.get("email") or "Not provided"
-        service = lead_data.get("service") or "General Inquiry"
+        raw_service = lead_data.get("service")
+        service = self._normalize_service_name(raw_service)
         company = lead_data.get("company") or "Not specified"
-        budget = lead_data.get("budget") or "Not discussed"
-        timeline = lead_data.get("timeline") or "Immediate"
-        requirement = lead_data.get("requirement") or "Customer enquired via AI chatbot"
+        budget = lead_data.get("budget")
+        timeline = lead_data.get("timeline")
+        raw_requirement = lead_data.get("requirement") or "Customer enquired via AI chatbot"
         human_req = lead_data.get("human_required", False)
-        created_at = lead_data.get("created_at") or time.strftime("%d %b %Y, %I:%M %p IST")
 
-        wa_link = self._build_whatsapp_link(lead_data.get("phone"), lead_data.get("name"), lead_data.get("service"))
+        msg_extra = []
+        if raw_requirement and raw_requirement != "Customer enquired via AI chatbot":
+            msg_extra.append(raw_requirement)
+        if budget and budget != "Not discussed":
+            msg_extra.append(f"Budget: {budget}")
+        if timeline and timeline != "Immediate":
+            msg_extra.append(f"Timeline: {timeline}")
 
-        priority_badge = """<span style="background-color: #ef4444; color: #ffffff; padding: 4px 10px; border-radius: 9999px; font-weight: bold; font-size: 12px;">🚨 URGENT: Human Agent Requested</span>""" if human_req else """<span style="background-color: #10b981; color: #ffffff; padding: 4px 10px; border-radius: 9999px; font-weight: bold; font-size: 12px;">✅ Qualified Lead</span>"""
+        detail_msg = " | ".join(msg_extra) if msg_extra else raw_requirement
+        message_display = f"Service: {service} {detail_msg}".strip()
+
+        wa_link = self._build_whatsapp_link(lead_data.get("phone"), lead_data.get("name"), service)
+
+        priority_badge = ""
+        if human_req:
+            priority_badge = """<div style="margin-bottom: 16px;"><span style="background-color: #ef4444; color: #ffffff; padding: 4px 10px; border-radius: 9999px; font-weight: bold; font-size: 11.5px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">🚨 URGENT: Human Agent Requested</span></div>"""
 
         wa_button = ""
         if wa_link:
             wa_button = f"""
-            <a href="{wa_link}" target="_blank" style="display: inline-block; background-color: #25D366; color: #ffffff; text-decoration: none; padding: 12px 24px; border-radius: 8px; font-weight: 600; font-size: 14px; margin-right: 12px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
+            <a href="{wa_link}" target="_blank" style="display: inline-block; background-color: #25D366; color: #ffffff; text-decoration: none; padding: 11px 20px; border-radius: 8px; font-weight: 600; font-size: 13.5px; margin: 4px 8px 4px 0; box-shadow: 0 4px 6px -1px rgba(37, 211, 102, 0.25); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
                 💬 Open WhatsApp Chat with Lead
             </a>
             """
 
         phone_call_button = ""
-        if phone != "Not provided":
+        if phone != "Not provided" and phone != "No Phone":
             phone_call_button = f"""
-            <a href="tel:{phone}" style="display: inline-block; background-color: #4f46e5; color: #ffffff; text-decoration: none; padding: 12px 24px; border-radius: 8px; font-weight: 600; font-size: 14px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
+            <a href="tel:{phone}" style="display: inline-block; background-color: #6366f1; color: #ffffff; text-decoration: none; padding: 11px 20px; border-radius: 8px; font-weight: 600; font-size: 13.5px; margin: 4px 0; box-shadow: 0 4px 6px -1px rgba(99, 102, 241, 0.25); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
                 📞 Call Customer ({phone})
             </a>
             """
@@ -83,71 +120,66 @@ class NotificationService:
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>New Lead Captured - Techvunex Innovation</title>
+    <title>Techvunex AI Enquiry</title>
 </head>
-<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f3f4f6; margin: 0; padding: 24px;">
-    <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); border: 1px solid #e5e7eb;">
-        <!-- Header -->
-        <div style="background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%); padding: 28px 24px; text-align: center;">
-            <h1 style="color: #ffffff; margin: 0 0 6px 0; font-size: 22px; font-weight: 700; letter-spacing: -0.5px;">Techvunex Innovation</h1>
-            <p style="color: #94a3b8; margin: 0; font-size: 14px;">🚀 AI Assistant Lead Alert</p>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f1f5f9; margin: 0; padding: 24px;">
+    <div style="max-width: 580px; margin: 0 auto; background-color: #ffffff; border-radius: 14px; overflow: hidden; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.08); border: 1px solid #e2e8f0;">
+        <!-- Header Banner (Vibrant Purple matching Techvunex Enquiry form) -->
+        <div style="background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%); padding: 24px 28px; text-align: left;">
+            <h2 style="color: #ffffff; margin: 0 0 6px 0; font-size: 21px; font-weight: 700; letter-spacing: -0.2px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">Techvunex AI Enquiry</h2>
+            <p style="color: rgba(255, 255, 255, 0.92); margin: 0; font-size: 13.5px; font-weight: 400; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">A new enquiry has been submitted on Techvunex.</p>
         </div>
 
-        <!-- Body -->
-        <div style="padding: 28px 24px;">
-            <div style="margin-bottom: 20px; display: flex; align-items: center;">
-                {priority_badge}
-                <span style="color: #64748b; font-size: 13px; margin-left: auto;">{created_at}</span>
-            </div>
+        <!-- Body Section -->
+        <div style="padding: 26px 28px 22px 28px;">
+            {priority_badge}
 
-            <h2 style="color: #1e293b; font-size: 18px; margin: 0 0 16px 0; border-bottom: 2px solid #f1f5f9; padding-bottom: 8px;">Lead Contact Details</h2>
-
-            <table style="width: 100%; border-collapse: collapse; margin-bottom: 24px;">
+            <table style="width: 100%; border-collapse: collapse; margin-bottom: 18px;">
                 <tr>
-                    <td style="padding: 10px 0; color: #64748b; font-size: 14px; width: 35%;">Customer Name:</td>
-                    <td style="padding: 10px 0; color: #0f172a; font-size: 15px; font-weight: 600;">{name}</td>
+                    <td style="padding: 6px 0; color: #0f172a; font-size: 14.5px; line-height: 1.5; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+                        <strong style="color: #0f172a; font-weight: 700;">Name:</strong> {name}
+                    </td>
                 </tr>
-                <tr style="border-top: 1px solid #f8fafc;">
-                    <td style="padding: 10px 0; color: #64748b; font-size: 14px;">Phone Number:</td>
-                    <td style="padding: 10px 0; color: #0f172a; font-size: 15px; font-weight: 600;"><a href="tel:{phone}" style="color: #4f46e5; text-decoration: none;">{phone}</a></td>
+                <tr>
+                    <td style="padding: 6px 0; color: #0f172a; font-size: 14.5px; line-height: 1.5; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+                        <strong style="color: #0f172a; font-weight: 700;">Email:</strong> <a href="mailto:{email}" style="color: #4f46e5; text-decoration: none;">{email}</a>
+                    </td>
                 </tr>
-                <tr style="border-top: 1px solid #f8fafc;">
-                    <td style="padding: 10px 0; color: #64748b; font-size: 14px;">Email:</td>
-                    <td style="padding: 10px 0; color: #0f172a; font-size: 14px;"><a href="mailto:{email}" style="color: #4f46e5; text-decoration: none;">{email}</a></td>
+                <tr>
+                    <td style="padding: 6px 0; color: #0f172a; font-size: 14.5px; line-height: 1.5; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+                        <strong style="color: #0f172a; font-weight: 700;">Phone:</strong> <a href="tel:{phone}" style="color: #4f46e5; text-decoration: none;">{phone}</a>
+                    </td>
                 </tr>
-                <tr style="border-top: 1px solid #f8fafc;">
-                    <td style="padding: 10px 0; color: #64748b; font-size: 14px;">Company / Business:</td>
-                    <td style="padding: 10px 0; color: #0f172a; font-size: 14px;">{company}</td>
+                <tr>
+                    <td style="padding: 6px 0; color: #0f172a; font-size: 14.5px; line-height: 1.5; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+                        <strong style="color: #0f172a; font-weight: 700;">Company:</strong> {company}
+                    </td>
                 </tr>
-                <tr style="border-top: 1px solid #f8fafc;">
-                    <td style="padding: 10px 0; color: #64748b; font-size: 14px;">Requested Service:</td>
-                    <td style="padding: 10px 0; color: #4338ca; font-size: 14px; font-weight: 600;">{service}</td>
-                </tr>
-                <tr style="border-top: 1px solid #f8fafc;">
-                    <td style="padding: 10px 0; color: #64748b; font-size: 14px;">Stated Budget:</td>
-                    <td style="padding: 10px 0; color: #059669; font-size: 14px; font-weight: 600;">{budget}</td>
-                </tr>
-                <tr style="border-top: 1px solid #f8fafc;">
-                    <td style="padding: 10px 0; color: #64748b; font-size: 14px;">Expected Timeline:</td>
-                    <td style="padding: 10px 0; color: #0f172a; font-size: 14px;">{timeline}</td>
+                <tr>
+                    <td style="padding: 6px 0; color: #0f172a; font-size: 14.5px; line-height: 1.5; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+                        <strong style="color: #0f172a; font-weight: 700;">Subject:</strong> {service}
+                    </td>
                 </tr>
             </table>
 
-            <h2 style="color: #1e293b; font-size: 16px; margin: 0 0 10px 0;">Customer Requirements / Discussion</h2>
-            <div style="background-color: #f8fafc; border-left: 4px solid #4f46e5; padding: 14px 16px; border-radius: 4px; font-size: 14px; color: #334155; line-height: 1.5; margin-bottom: 24px;">
-                {requirement}
+            <!-- Message Card (Lavender tint matching enquiry template) -->
+            <div style="background-color: #f7f6fe; border: 1px solid #ede9fe; border-radius: 10px; padding: 16px 18px; margin-top: 14px; margin-bottom: 22px;">
+                <div style="font-size: 14px; font-weight: 700; color: #0f172a; margin-bottom: 6px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">Message</div>
+                <div style="font-size: 13.5px; color: #334155; line-height: 1.6; word-break: break-word; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+                    {message_display}
+                </div>
             </div>
 
-            <!-- Quick Action Buttons -->
-            <div style="margin: 28px 0 10px 0; text-align: center;">
+            <!-- Instant Follow-up Action Buttons -->
+            <div style="margin: 18px 0 6px 0; text-align: left;">
                 {wa_button}
                 {phone_call_button}
             </div>
         </div>
 
         <!-- Footer -->
-        <div style="background-color: #f8fafc; padding: 16px 24px; text-align: center; border-top: 1px solid #e2e8f0; font-size: 12px; color: #94a3b8;">
-            Techvunex Innovation • Sector 63, Noida, UP (A Subsidiary of Digital Yug Innovation)<br>
+        <div style="background-color: #f8fafc; padding: 14px 24px; text-align: center; border-top: 1px solid #e2e8f0; font-size: 12px; color: #94a3b8; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+            Techvunex Innovation • Sector 63, Noida (A Subsidiary of Digital Yug Innovation)<br>
             Official AI Assistant Automation System • Instant Lead Notification
         </div>
     </div>
@@ -159,20 +191,22 @@ class NotificationService:
         name = lead_data.get("name") or "Website Visitor"
         phone = lead_data.get("phone") or "Not provided"
         email = lead_data.get("email") or "Not provided"
-        service = lead_data.get("service") or "General Inquiry"
-        budget = lead_data.get("budget") or "Not discussed"
+        raw_service = lead_data.get("service")
+        service = self._normalize_service_name(raw_service)
+        company = lead_data.get("company") or "Not specified"
         req = lead_data.get("requirement") or "Customer enquired via AI chatbot"
-        wa_link = self._build_whatsapp_link(lead_data.get("phone"), lead_data.get("name"), lead_data.get("service"))
+        wa_link = self._build_whatsapp_link(lead_data.get("phone"), lead_data.get("name"), service)
 
-        return f"""TECHVUNEX INNOVATION - NEW LEAD CAPTURED
+        return f"""TECHVUNEX AI ENQUIRY (NEW LEAD CAPTURED)
 ============================================
 Name: {name}
-Phone: {phone}
 Email: {email}
-Service: {service}
-Budget: {budget}
-Requirement: {req}
-Human Agent Requested: {lead_data.get('human_required', False)}
+Phone: {phone}
+Company: {company}
+Subject: {service}
+
+Message:
+Service: {service} {req}
 
 1-Click WhatsApp Link:
 {wa_link}
@@ -198,10 +232,18 @@ Human Agent Requested: {lead_data.get('human_required', False)}
             logger.error(f"Failed to send lead email notification via SMTP: {e}")
             return False
 
-    async def _send_via_resend(self, recipients: List[str], subject: str, html_content: str, plain_content: str = "", reply_to: str = "info@techvunex.in") -> bool:
+    async def _send_via_resend(
+        self,
+        recipients: List[str],
+        subject: str,
+        html_content: str,
+        plain_content: str = "",
+        reply_to: str = "info@techvunex.in",
+        bcc: Optional[List[str]] = None
+    ) -> bool:
         """
         Send email via Resend HTTP REST API over HTTPS Port 443.
-        Includes multipart plain text and professional headers to ensure high inbox deliverability.
+        Includes multipart plain text, BCC support, and professional headers to ensure high inbox deliverability.
         """
         if not settings.RESEND_API_KEY:
             return False
@@ -214,10 +256,12 @@ Human Agent Requested: {lead_data.get('human_required', False)}
             }
             # For onboarding@resend.dev sandbox, Resend routes to account holder email
             target_recipients = recipients
+            target_bcc = [b for b in (bcc or []) if b]
             if "onboarding@resend.dev" in settings.RESEND_FROM_EMAIL:
                 target_recipients = [r for r in recipients if "techvunex.in" in r.lower()] or ["trainee4@techvunex.in"]
+                target_bcc = [b for b in target_bcc if "techvunex.in" in b.lower()]
 
-            from_display = f"Techvunex Assistant <{settings.RESEND_FROM_EMAIL}>" if "<" not in settings.RESEND_FROM_EMAIL else settings.RESEND_FROM_EMAIL
+            from_display = f"Techvunex AI <{settings.RESEND_FROM_EMAIL}>" if "<" not in settings.RESEND_FROM_EMAIL else settings.RESEND_FROM_EMAIL
 
             payload = {
                 "from": from_display,
@@ -228,11 +272,13 @@ Human Agent Requested: {lead_data.get('human_required', False)}
             }
             if plain_content:
                 payload["text"] = plain_content
+            if target_bcc:
+                payload["bcc"] = target_bcc
 
             async with httpx.AsyncClient(timeout=12.0) as client:
                 res = await client.post(url, headers=headers, json=payload)
                 if res.status_code in (200, 201):
-                    logger.info(f"Successfully sent lead email via Resend HTTP API to {target_recipients}: {res.json().get('id')}")
+                    logger.info(f"Successfully sent lead email via Resend HTTP API to {target_recipients} (BCC: {target_bcc}): {res.json().get('id')}")
                     return True
                 else:
                     logger.error(f"Resend HTTP API returned error ({res.status_code}): {res.text}")
@@ -247,18 +293,23 @@ Human Agent Requested: {lead_data.get('human_required', False)}
             logger.debug("Email notification skipped: NOTIFICATION_EMAIL_ENABLED is False")
             return False
 
+        # Strictly require a valid mobile phone number before sending email
+        phone = lead_data.get("phone")
+        clean_phone = self._clean_phone_for_whatsapp(phone)
+        if not clean_phone or len(clean_phone) < 10 or str(phone).strip() in ("Not provided", "No Phone", "None", ""):
+            logger.info("Email notification skipped: Valid mobile number is strictly required to send email.")
+            return False
+
         try:
             recipients = [r.strip() for r in settings.NOTIFICATION_EMAIL_TO.split(",") if r.strip()]
             if not recipients:
                 recipients = ["trainee4@techvunex.in"]
 
-            lead_name = lead_data.get("name") or "Website Visitor"
-            service = lead_data.get("service") or "Inquiry"
-            phone = lead_data.get("phone") or "No Phone"
-            
-            # Clean subject without spam-trigger symbols
-            subject = f"New Lead Inquiry: {lead_name} - {service} ({phone})"
+            clean_service = self._normalize_service_name(lead_data.get("service"))
+            subject = f"Techvunex AI: {clean_service}"
             reply_to = lead_data.get("email") or "info@techvunex.in"
+
+            bcc_recipients = [b.strip() for b in settings.NOTIFICATION_EMAIL_BCC.split(",") if b.strip()]
 
             plain_content = self._generate_email_plain(lead_data)
             html_content = self._generate_email_html(lead_data)
@@ -270,7 +321,8 @@ Human Agent Requested: {lead_data.get('human_required', False)}
                     subject,
                     html_content,
                     plain_content=plain_content,
-                    reply_to=reply_to
+                    reply_to=reply_to,
+                    bcc=bcc_recipients
                 )
                 if resend_ok:
                     return True
@@ -279,14 +331,16 @@ Human Agent Requested: {lead_data.get('human_required', False)}
             if settings.SMTP_USER and settings.SMTP_PASSWORD:
                 msg = EmailMessage()
                 msg["Subject"] = subject
-                msg["From"] = settings.SMTP_USER
+                msg["From"] = f"Techvunex AI <{settings.SMTP_USER}>" if "<" not in settings.SMTP_USER else settings.SMTP_USER
                 msg["To"] = ", ".join(recipients)
+                if bcc_recipients:
+                    msg["Bcc"] = ", ".join(bcc_recipients)
                 msg.set_content(plain_content)
                 msg.add_alternative(html_content, subtype="html")
 
                 success = await asyncio.to_thread(self._sync_send_smtp, msg)
                 if success:
-                    logger.info(f"Successfully sent lead notification email via SMTP to {recipients}")
+                    logger.info(f"Successfully sent lead notification email via SMTP to {recipients} (BCC: {bcc_recipients})")
                 return success
 
             return False
@@ -405,7 +459,9 @@ Human Agent Requested: {lead_data.get('human_required', False)}
 
         # Fire notification tasks in background
         tasks = []
-        if settings.NOTIFICATION_EMAIL_ENABLED:
+        clean_phone = self._clean_phone_for_whatsapp(phone)
+        has_mobile = bool(clean_phone and len(clean_phone) >= 10 and str(phone).strip() not in ("Not provided", "No Phone", "None", ""))
+        if settings.NOTIFICATION_EMAIL_ENABLED and has_mobile:
             tasks.append(asyncio.create_task(self.send_lead_email(lead_data)))
         if settings.TELEGRAM_NOTIFICATIONS_ENABLED:
             tasks.append(asyncio.create_task(self.send_telegram_alert(lead_data)))

@@ -267,3 +267,14 @@ def test_response_post_processor_cleanup():
     fake_shutdown = "Alright, shutting down assistance for now."
     cleaned_shutdown = response_post_processor.process(fake_shutdown, expected_language="en", domain="system_control")
     assert "can't shut down the service" in cleaned_shutdown.lower()
+
+    # 4. Enforce official company phone number (+91-7834979979) in contact channels
+    contact_text = (
+        "Hello Suman! You can connect with our expert team at Techvunex Innovation through the following channels:\n\n"
+        "Email: info@techvunex.in\n"
+        "Headquarters: Sector 63, Noida, Uttar Pradesh\n"
+        "Working Hours: Monday to Saturday, 10:30 AM to 6:30 PM IST (Sunday closed)"
+    )
+    cleaned_contact = response_post_processor.process(contact_text, expected_language="en", domain="techvunex_relevant")
+    assert "+91-7834979979" in cleaned_contact
+    assert "Phone / WhatsApp" in cleaned_contact

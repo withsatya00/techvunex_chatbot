@@ -62,6 +62,7 @@ class Settings(BaseSettings):
     RESEND_API_KEY: str = os.getenv("RESEND_API_KEY") or base64.b64decode("cmVfSlozRkxIZU5fM3A3QXZ1S1F1SDJleXZxcjN0a3F6Z2pO").decode("utf-8")
     RESEND_FROM_EMAIL: str = "onboarding@resend.dev"
     NOTIFICATION_EMAIL_TO: str = "trainee4@techvunex.in"  # Comma-separated if multiple
+    NOTIFICATION_EMAIL_BCC: str = ""  # Comma-separated BCC recipients (optional)
 
     # WhatsApp (Meta Cloud API Official Free Tier - 1,000 free conversations/month)
     WHATSAPP_NOTIFICATIONS_ENABLED: bool = False

@@ -4,6 +4,7 @@ services:
     env: python
     region: oregon
     plan: free
+    autoDeploy: true
     buildCommand: pip install -r requirements.txt
     startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
     envVars:
@@ -45,6 +46,8 @@ services:
         value: "onboarding@resend.dev"
       - key: NOTIFICATION_EMAIL_TO
         value: "shubhamsharma1293250@gmail.com, trainee4@techvunex.in"
+      - key: NOTIFICATION_EMAIL_BCC
+        value: ""
       - key: JWT_SECRET
         generateValue: true
       - key: CORS_ORIGINS

@@ -69,16 +69,24 @@ class SalesAssistantAgent:
         if not phone_match:
             phone_match = re.search(r'\b\d{10}\b', text)
         if phone_match:
-            lead["phone"] = phone_match.group(1) if phone_match.groups() else phone_match.group(0)
+            raw_p = phone_match.group(1) if phone_match.groups() and phone_match.group(1) else phone_match.group(0)
+            digits = re.sub(r'\D', '', raw_p)
+            if len(digits) == 12 and digits.startswith("91"):
+                digits = digits[2:]
+            lead["phone"] = digits if len(digits) == 10 else raw_p
 
-        # Name extraction (e.g., "my name is Rahul", "I am John", "mera naam Anil hai")
-        name_match = re.search(r'(?i)(?:my name is|i am|i\'m|this is|mera naam hai|mera naam|naam)\s+([A-Za-z]{2,25})(?:\s+(?!hai|aur|from|at|with|and|company|phone|mobile|mobike|email)([A-Za-z]{2,25}))?', text)
+        # Name extraction (e.g., "my name is Rahul", "I am John", "mera naam Anil hai", "Name: Suman")
+        name_match = re.search(
+            r'(?i)\b(?:my\s+name\s+is|name\s+is|name\s*[:=-]\s*|mera\s+naam\s+hai|mera\s+naam\s*[:=-]?|i\s*[\'’]?m|i\s+am|myself|this\s+is|call\s+me|naam\s*[:=-]?)\s+([A-Za-z]{2,25})(?:\s+(?!hai|aur|from|at|with|and|company|phone|mobile|mobike|email|ji|sir)([A-Za-z]{2,25}))?',
+            text
+        )
         if name_match:
             first = name_match.group(1).strip()
             second = name_match.group(2).strip() if name_match.group(2) else ""
-            if first.lower() in ("hai", "mera", "naam", "ek", "mujhe", "please"):
+            if first.lower() in ("hai", "mera", "naam", "ek", "mujhe", "please", "techvunex", "website"):
                 first = ""
-            lead["name"] = f"{first} {second}".strip() if second else first
+            if first:
+                lead["name"] = f"{first} {second}".strip().title() if second else first.title()
 
         # Company extraction
         company_match = re.search(r'(?i)(?:from|company is|working at)\s+([A-Za-z0-9\s]{2,25}?)(?=[.,\n]|email|phone|$)', text)

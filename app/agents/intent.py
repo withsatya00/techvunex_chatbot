@@ -289,7 +289,7 @@ class QueryUnderstandingAgent:
         if intent == "parent_company":
             return "Techvunex Innovation parent company Digital Yug Innovation https://digitalyuginnovation.com/ Noida corporate hierarchy"
 
-        if intent == "contact":
+        if intent in ("contact", "human_handoff", "consultation"):
             return "Techvunex contact details phone email address Noida Sector 63 +91-7834979979 info@techvunex.in office timings"
 
         if intent == "company_info":

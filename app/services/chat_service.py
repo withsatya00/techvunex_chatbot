@@ -128,18 +128,20 @@ class ChatService:
 
         contact_en = (
             "You can connect directly with the Techvunex Innovation team:\n\n"
+            "• **Phone / WhatsApp:** +91-7834979979\n"
             "• **Email:** info@techvunex.in\n"
             "• **Website:** https://techvunex.in/\n"
-            "• **Location:** Sector 63, Noida, Uttar Pradesh, India\n"
-            "• **Working Hours:** Monday – Saturday, 10:30 AM – 6:30 PM IST\n\n"
+            "• **Headquarters:** Sector 63, Noida, Uttar Pradesh, India\n"
+            "• **Working Hours:** Monday – Saturday, 10:30 AM – 6:30 PM IST (Sunday closed)\n\n"
             "You can also leave your phone number or email right here, and our technical team will reach out to you directly!"
         )
         contact_hi = (
             "Aap Techvunex Innovation team se directly connect kar sakte hain:\n\n"
+            "• **Phone / WhatsApp:** +91-7834979979\n"
             "• **Email:** info@techvunex.in\n"
             "• **Website:** https://techvunex.in/\n"
-            "• **Location:** Sector 63, Noida, Uttar Pradesh\n"
-            "• **Office Hours:** Monday – Saturday, 10:30 AM – 6:30 PM IST\n\n"
+            "• **Headquarters:** Sector 63, Noida, Uttar Pradesh\n"
+            "• **Office Hours:** Monday – Saturday, 10:30 AM – 6:30 PM IST (Sunday closed)\n\n"
             "Aap apna contact number ya email yahan share kar sakte hain, hamari team aapse direct connect karegi!"
         )
 
@@ -286,12 +288,30 @@ class ChatService:
 
         # 1. User Name extraction (latest introduced name wins)
         for msg in reversed_messages:
-            name_match = re.search(r'\b(?:my\s+name\s+is|mera\s+naam\s+hai|mera\s+naam|i\s+am|myself)\s+([A-Za-z]+)\b', msg, re.IGNORECASE)
+            name_match = re.search(
+                r'(?i)\b(?:my\s+name\s+is|name\s+is|name\s*[:=-]\s*|mera\s+naam\s+hai|mera\s+naam\s*[:=-]?|i\s*[\'’]?m|i\s+am|myself|this\s+is|call\s+me|naam\s*[:=-]?)\s+([A-Za-z]{2,25})(?:\s+(?!hai|aur|from|at|with|and|company|phone|mobile|mobike|email|ji|sir)([A-Za-z]{2,25}))?',
+                msg
+            )
             if name_match:
-                cand = name_match.group(1).strip()
-                if cand.lower() not in ("techvunex", "website", "looking", "interested", "need", "here", "ready", "ek", "a", "an"):
-                    memory["name"] = cand.capitalize()
+                first = name_match.group(1).strip()
+                second = name_match.group(2).strip() if name_match.group(2) else ""
+                if first.lower() in ("hai", "mera", "naam", "ek", "mujhe", "please", "techvunex", "website", "looking", "interested", "need", "here", "ready", "a", "an"):
+                    first = ""
+                cand = f"{first} {second}".strip() if second else first
+                if cand:
+                    memory["name"] = cand.title()
                     break
+
+        # Fallback for name: check if user directly replied to an assistant question asking for name
+        if not memory.get("name") and history:
+            for idx, h in enumerate(history):
+                if h.get("role") == "assistant" and any(k in h.get("content", "").lower() for k in ["your name", "aapka naam", "share your name", "know your name"]):
+                    if idx + 1 < len(history) and history[idx + 1].get("role") == "user":
+                        reply = history[idx + 1].get("content", "").strip()
+                        if re.match(r'^[A-Za-z]{2,25}(?:\s+[A-Za-z]{2,25})?$', reply):
+                            if reply.lower() not in ("yes", "no", "sure", "ok", "okay", "hello", "hi", "hey", "website", "techvunex", "crm", "erp", "app"):
+                                memory["name"] = reply.title()
+                                break
 
         # 2. Phone extraction (latest phone wins)
         for msg in reversed_messages:
@@ -301,7 +321,11 @@ class ChatService:
             if not phone_match:
                 phone_match = re.search(r'\b\d{10}\b', msg)
             if phone_match:
-                memory["phone"] = phone_match.group(1).strip() if phone_match.groups() else phone_match.group(0).strip()
+                raw_p = phone_match.group(1).strip() if phone_match.groups() and phone_match.group(1) else phone_match.group(0).strip()
+                digits = re.sub(r'\D', '', raw_p)
+                if len(digits) == 12 and digits.startswith("91"):
+                    digits = digits[2:]
+                memory["phone"] = digits if len(digits) == 10 else raw_p
                 break
 
         # 3. Email extraction (latest email wins)
@@ -351,6 +375,28 @@ class ChatService:
                 break
 
         return memory
+
+    @staticmethod
+    def _resolve_lead_service(current_services: List[str], history: List[Dict[str, str]], intent: str) -> Optional[str]:
+        """Resolves the user's intended service from current message, dialogue history, or detected intent."""
+        if current_services:
+            return ", ".join(current_services)
+        for h in reversed(history):
+            if h.get("role") == "user":
+                prev_ana = query_agent.analyze(h.get("content", ""))
+                if prev_ana.get("requested_services"):
+                    return ", ".join(prev_ana["requested_services"])
+        if intent in ("free_offer", "website_free_offer", "website_requirement", "pricing_website", "website_features", "ecommerce", "saas"):
+            return "Website Development"
+        elif intent in ("crm", "pricing_crm", "pricing_erp"):
+            return "CRM & ERP Solutions"
+        elif intent in ("ai", "pricing_ai"):
+            return "AI Automation"
+        elif intent in ("app_development", "pricing_app"):
+            return "Mobile App Development"
+        elif intent in ("seo", "smo", "pricing_seo"):
+            return "Digital Marketing & SEO"
+        return None
 
     async def process_chat(
         self,
@@ -443,10 +489,26 @@ class ChatService:
             intent=intent
         )
 
-        # 9. Sales & Lead Processing
+        # 9. Extract Conversation Memory across history & current query (Master AI Spec §5)
+        conversation_memory = self._extract_conversation_memory(clean_msg, history)
+
+        # 10. Sales & Lead Processing
         lead_data = sales_agent.extract_lead_attributes(clean_msg)
-        if detected_services:
-            lead_data["service"] = ", ".join(detected_services)
+        # Retain conversational memory so name, phone, etc. are never lost across turns
+        if not lead_data.get("name") and conversation_memory.get("name"):
+            lead_data["name"] = conversation_memory["name"]
+        if not lead_data.get("phone") and conversation_memory.get("phone"):
+            lead_data["phone"] = conversation_memory["phone"]
+        if not lead_data.get("email") and conversation_memory.get("email"):
+            lead_data["email"] = conversation_memory["email"]
+        if not lead_data.get("budget") and conversation_memory.get("budget"):
+            lead_data["budget"] = conversation_memory["budget"]
+        if not lead_data.get("company") and conversation_memory.get("company"):
+            lead_data["company"] = conversation_memory["company"]
+
+        resolved_service = self._resolve_lead_service(detected_services, history, intent)
+        if resolved_service:
+            lead_data["service"] = resolved_service
 
         is_handoff, handoff_reason = sales_agent.evaluate_handoff_condition(
             clean_msg, intent, len(context_chunks), lead_data
@@ -454,7 +516,8 @@ class ChatService:
 
         if is_handoff:
             lead_data["human_required"] = True
-            lead_data["status"] = "human_required"
+            if lead_data.get("status") != "qualified":
+                lead_data["status"] = "human_required"
 
         # Check FAQ Cache for zero-latency response on repeated/canonical queries
         faq_key = f"{rag_search_query.strip().lower()}_{lang}_{intent}"
@@ -505,7 +568,6 @@ class ChatService:
             lead_coro = lead_service.create_or_update_lead(session, lead_data)
 
         # 10. Build System Prompt with explicit Language Directive & Conversation Memory (Master AI Spec §5)
-        conversation_memory = self._extract_conversation_memory(clean_msg, history)
         system_prompt = build_system_prompt(context_chunks, language=lang, conversation_memory=conversation_memory, current_query=clean_msg)
         messages = history + [{"role": "user", "content": clean_msg}]
 
@@ -551,11 +613,11 @@ class ChatService:
         # Append human handoff offer only if triggered and relevant
         if is_handoff and "connect" not in assistant_text.lower() and "team" not in assistant_text.lower():
             if lang == "hi":
-                assistant_text += "\n\nक्या आप टेकवुनेक्स टीम के साथ सीधे परामर्श के लिए संपर्क करना चाहेंगे?"
+                assistant_text += "\n\nक्या आप टेकवुनेक्स टीम के साथ सीधे परामर्श के लिए संपर्क करना चाहेंगे? (Direct Call/WhatsApp: +91-7834979979)"
             elif lang == "hinglish":
-                assistant_text += "\n\nKya aap Techvunex team ke sath direct consultation connect karna chahenge?"
+                assistant_text += "\n\nKya aap Techvunex team ke sath direct consultation connect karna chahenge? (Direct Call/WhatsApp: +91-7834979979)"
             else:
-                assistant_text += "\n\nWould you like to connect directly with the Techvunex team for a detailed consultation?"
+                assistant_text += "\n\nWould you like to connect directly with the Techvunex team for a detailed consultation? (Direct Call/WhatsApp: +91-7834979979)"
 
         # 13. Deduplicate Sources (Internal tracking only)
         unique_chunks = self._deduplicate_sources(context_chunks)
@@ -739,16 +801,31 @@ class ChatService:
             intent=intent
         )
 
-        # 5. Lead & Handoff
+        # 5. Extract Conversation Memory & Lead Processing
+        conversation_memory = self._extract_conversation_memory(clean_msg, history)
+
         lead_data = sales_agent.extract_lead_attributes(clean_msg)
-        if detected_services:
-            lead_data["service"] = ", ".join(detected_services)
+        if not lead_data.get("name") and conversation_memory.get("name"):
+            lead_data["name"] = conversation_memory["name"]
+        if not lead_data.get("phone") and conversation_memory.get("phone"):
+            lead_data["phone"] = conversation_memory["phone"]
+        if not lead_data.get("email") and conversation_memory.get("email"):
+            lead_data["email"] = conversation_memory["email"]
+        if not lead_data.get("budget") and conversation_memory.get("budget"):
+            lead_data["budget"] = conversation_memory["budget"]
+        if not lead_data.get("company") and conversation_memory.get("company"):
+            lead_data["company"] = conversation_memory["company"]
+
+        resolved_service = self._resolve_lead_service(detected_services, history, intent)
+        if resolved_service:
+            lead_data["service"] = resolved_service
         is_handoff, _ = sales_agent.evaluate_handoff_condition(
             clean_msg, intent, len(context_chunks), lead_data
         )
         if is_handoff:
             lead_data["human_required"] = True
-            lead_data["status"] = "human_required"
+            if lead_data.get("status") != "qualified":
+                lead_data["status"] = "human_required"
 
         # Check FAQ Cache for zero-latency streaming on repeated/canonical queries
         faq_key = f"{rag_search_query.strip().lower()}_{lang}_{intent}"
@@ -826,7 +903,6 @@ class ChatService:
             asyncio.create_task(_persist_lead_bg())
 
         # 6. Stream tokens directly from LLM (native async, zero artificial delays)
-        conversation_memory = self._extract_conversation_memory(clean_msg, history)
         system_prompt = build_system_prompt(context_chunks, language=lang, conversation_memory=conversation_memory, current_query=clean_msg)
         messages = history + [{"role": "user", "content": clean_msg}]
 

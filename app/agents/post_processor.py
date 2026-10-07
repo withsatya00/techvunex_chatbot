@@ -66,7 +66,20 @@ class ResponsePostProcessor:
             from app.agents.domain import domain_classifier
             return domain_classifier.get_boundary_response("unsafe_off_topic", cleaned, expected_language)
 
-        # 8. Language integrity check
+        # 8. Ensure company contact phone number (+91-7834979979) is always present if contact channels are provided
+        if "info@techvunex.in" in cleaned and "7834979979" not in cleaned:
+            if "• **Email:** info@techvunex.in" in cleaned:
+                cleaned = cleaned.replace("• **Email:** info@techvunex.in", "• **Phone / WhatsApp:** +91-7834979979\n• **Email:** info@techvunex.in")
+            elif "- **Email:** info@techvunex.in" in cleaned:
+                cleaned = cleaned.replace("- **Email:** info@techvunex.in", "- **Phone / WhatsApp:** +91-7834979979\n- **Email:** info@techvunex.in")
+            elif "Email: info@techvunex.in" in cleaned:
+                cleaned = cleaned.replace("Email: info@techvunex.in", "Phone / WhatsApp: +91-7834979979\nEmail: info@techvunex.in")
+            elif "**Email:**" in cleaned:
+                cleaned = cleaned.replace("**Email:**", "**Phone / WhatsApp:** +91-7834979979\n**Email:**")
+            elif "info@techvunex.in" in cleaned:
+                cleaned += "\n\n• **Phone / WhatsApp:** +91-7834979979"
+
+        # 9. Language integrity check
         if expected_language == "en" and self.has_hinglish_leak(cleaned):
             logger.warning("Language mismatch detected in LLM response: Expected en but got Hinglish words.")
 
